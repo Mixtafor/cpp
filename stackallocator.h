@@ -62,7 +62,7 @@ struct StackAllocator {
     }
 
 
-    T* allocate(size_t n) noexcept {
+    T* allocate(size_t n) {
 //      size_t start_of_mem_area =
 //              stackStorage->free_mem + (align - (stackStorage->free_mem % align)) % align;
 //      stackStorage->free_mem = start_of_mem_area + n * sizeof(T);
@@ -131,10 +131,10 @@ class List {
     };
 
     using type_allocator= std::allocator_traits<Allocator>::template rebind_alloc<Node>;
-    [[no_unique_address]] type_allocator alloc;
     size_t sz;
 public:
     BaseNode endNode;
+    [[no_unique_address]] type_allocator alloc;
     using value_type = T;
 
 
