@@ -63,22 +63,20 @@ struct StackAllocator {
 
 
     T* allocate(size_t n) {
-//      size_t start_of_mem_area =
-//              stackStorage->free_mem + (align - (stackStorage->free_mem % align)) % align;
-//      stackStorage->free_mem = start_of_mem_area + n * sizeof(T);
-        std::byte* start_of_mem_area;
-        size_t end = stackStorage->storage + N - reinterpret_cast<std::byte*>(stackStorage->free_mem);
-        if (std::align(
-                alignof(T),
-                sizeof(T) * n,
-                stackStorage->free_mem,
-                end)) {
-          start_of_mem_area = reinterpret_cast<std::byte*>(stackStorage->free_mem);
-          stackStorage->free_mem = reinterpret_cast<std::byte*>(stackStorage->free_mem) + sizeof(T) * n;
-        } else {
-          throw std::bad_alloc();
-        }
-
+      std::byte* start_of_mem_area;
+      size_t end = stackStorage->storage + N -
+                   reinterpret_cast<std::byte*>(stackStorage->free_mem);
+      if (std::align(
+              alignof(T),
+              sizeof(T) * n,
+              stackStorage->free_mem,
+              end)) {
+        start_of_mem_area = reinterpret_cast<std::byte*>(stackStorage->free_mem);
+        stackStorage->free_mem = reinterpret_cast<std::byte*>(stackStorage->free_mem)
+                                 + sizeof(T) * n;
+      } else {
+        throw std::bad_alloc();
+      }
       return reinterpret_cast<T*>(start_of_mem_area);
     }
 
@@ -94,9 +92,11 @@ struct StackAllocator {
     bool operator==(const StackAllocator& other) const noexcept {
       return stackStorage == other.stackStorage;
     }
+
     bool operator!=(const StackAllocator& other) const noexcept {
       return !(*this == other);
     }
+
 };
 
 
@@ -136,8 +136,6 @@ public:
     BaseNode endNode;
     [[no_unique_address]] type_allocator alloc;
     using value_type = T;
-
-
 
 public:
 
@@ -254,26 +252,26 @@ public:
       return const_reverse_iterator(cbegin());
     }
 
-      iterator insert(const_iterator position, const T& value) {
-        Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
-        try {
-          std::allocator_traits<type_allocator>::construct(
-                  alloc,
-                  newNode,
-                  position.node->prev,
-                  position.node,
-                  value
-          );
-          ++sz;
-        } catch (...) {
-          std::allocator_traits<type_allocator>::deallocate(alloc, newNode, 1);
-          throw;
-        }
-        position.node->prev->next = newNode;
-        newNode->next = position.node;
-        newNode->prev = position.node->prev;
-        position.node->prev = newNode;
-        return iterator(newNode);
+    iterator insert(const_iterator position, const T& value) {
+      Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
+      try {
+        std::allocator_traits<type_allocator>::construct(
+                alloc,
+                newNode,
+                position.node->prev,
+                position.node,
+                value
+        );
+        ++sz;
+      } catch (...) {
+        std::allocator_traits<type_allocator>::deallocate(alloc, newNode, 1);
+        throw;
+      }
+      position.node->prev->next = newNode;
+      newNode->next = position.node;
+      newNode->prev = position.node->prev;
+      position.node->prev = newNode;
+      return iterator(newNode);
     }
 
     iterator erase(const_iterator position) {
@@ -282,8 +280,11 @@ public:
       next_node->prev = prev_node;
       prev_node->next = next_node;
       --sz;
-      std::allocator_traits<type_allocator>::destroy(alloc, static_cast<Node*>(position.node));
-      std::allocator_traits<type_allocator>::deallocate(alloc, static_cast<Node*>(position.node), 1);
+      std::allocator_traits<type_allocator>::destroy(alloc,
+                                                     static_cast<Node*>(position.node));
+      std::allocator_traits<type_allocator>::deallocate(alloc,
+                                                        static_cast<Node*>(position.node),
+                                                        1);
       return iterator(next_node);
     }
 
@@ -292,7 +293,7 @@ public:
       return alloc;
     }
 
-     List(const Allocator& _alloc = Allocator())
+    List(const Allocator& _alloc = Allocator())
             : sz(0)
             , endNode()
             , alloc(_alloc)
@@ -350,10 +351,10 @@ public:
     }
 
     List(const List& other)
-    : sz(0)
-    , endNode()
-    , alloc(std::allocator_traits<type_allocator>
-            ::select_on_container_copy_construction(other.alloc)) {
+            : sz(0)
+            , endNode()
+            , alloc(std::allocator_traits<Allocator>
+                    ::select_on_container_copy_construction(other.alloc)) {
       size_t count = 0;
       try {
         for (auto it = other.begin(); it != other.end(); ++it) {
@@ -372,7 +373,7 @@ public:
       if (this == &other) { return *this; }
       List tmp;
       if (std::allocator_traits<type_allocator>
-              ::propagate_on_container_copy_assignment::value) {
+      ::propagate_on_container_copy_assignment::value) {
         tmp.alloc = other.alloc;
       } else {
         tmp.alloc = alloc;
@@ -381,7 +382,7 @@ public:
         tmp.push_back(*it);
       }
       if constexpr (std::allocator_traits<Allocator>
-              ::propagate_on_container_copy_assignment::value) {
+      ::propagate_on_container_copy_assignment::value) {
         std::swap(alloc, tmp.alloc);
       }
       std::swap((--tmp.end()).node->next, endNode.prev->next);
@@ -407,7 +408,10 @@ public:
     void push_back(const T& value) {
       Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
       try {
-        std::allocator_traits<type_allocator>::construct(alloc, newNode, endNode.prev, &endNode, value);
+        std::allocator_traits<type_allocator>::construct(alloc,
+                                                         newNode,
+                                                         endNode.prev,
+                                                         &endNode, value);
       } catch (...) {
         alloc.deallocate(newNode, 1);
         throw;
@@ -422,7 +426,10 @@ public:
     void push_front(const T& value) {
       Node* newNode = alloc.allocate(1);
       try {
-        std::allocator_traits<type_allocator>::construct(alloc, newNode, &endNode, endNode.next, value);
+        std::allocator_traits<type_allocator>::construct(alloc,
+                                                         newNode,
+                                                         &endNode,
+                                                         endNode.next, value);
       } catch (...) {
         alloc.deallocate(newNode, 1);
         throw;
@@ -459,8 +466,4 @@ public:
       alloc.deallocate(toRemove, 1);
       --sz;
     }
-
-
 };
-
-
