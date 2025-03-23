@@ -6,7 +6,7 @@
 #include "memory"
 #include "list"
 
-
+// Fixed storage with proper alignment.
 template <size_t N>
 struct StackStorage {
     alignas(std::max_align_t) std::byte storage[N];
@@ -28,7 +28,7 @@ struct StackAllocator {
     using const_pointer   = const T*;
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
-    size_t align;
+    size_t align;  // alignment for T
     StackStorage<N>* stackStorage;
 
     StackAllocator(): stackStorage() {}
@@ -61,7 +61,7 @@ struct StackAllocator {
       return *this;
     }
 
-
+    // Allocate memory for n objects of type T using std::align.
     T* allocate(size_t n) {
       std::byte* start_of_mem_area;
       size_t end = stackStorage->storage + N -
@@ -133,12 +133,13 @@ class List {
     using type_allocator= std::allocator_traits<Allocator>::template rebind_alloc<Node>;
     size_t sz;
 public:
-    BaseNode endNode;
+    BaseNode endNode; // fake node
     [[no_unique_address]] type_allocator alloc;
     using value_type = T;
 
 public:
 
+    // iterator for list
     template<bool Const>
     struct base_iterator {
         using iterator_category = std::bidirectional_iterator_tag;
