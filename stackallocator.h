@@ -9,8 +9,8 @@
 
 template <size_t N>
 struct StackStorage {
-    std::byte storage[N];
-    size_t free_mem = 0;
+    alignas(std::max_align_t) std::byte storage[N];
+    void* free_mem = storage;
 
     StackStorage() = default;
 
@@ -63,11 +63,23 @@ struct StackAllocator {
 
 
     T* allocate(size_t n) noexcept {
-      size_t start_of_mem_area =
-              stackStorage->free_mem + (align - (stackStorage->free_mem % align)) % align;
-      stackStorage->free_mem = start_of_mem_area + n * sizeof(T);
+//      size_t start_of_mem_area =
+//              stackStorage->free_mem + (align - (stackStorage->free_mem % align)) % align;
+//      stackStorage->free_mem = start_of_mem_area + n * sizeof(T);
+        std::byte* start_of_mem_area;
+        size_t end = stackStorage->storage + N - reinterpret_cast<std::byte*>(stackStorage->free_mem);
+        if (std::align(
+                alignof(T),
+                sizeof(T) * n,
+                stackStorage->free_mem,
+                end)) {
+          start_of_mem_area = reinterpret_cast<std::byte*>(stackStorage->free_mem);
+          stackStorage->free_mem = reinterpret_cast<std::byte*>(stackStorage->free_mem) + sizeof(T) * n;
+        } else {
+          throw std::bad_alloc();
+        }
 
-      return reinterpret_cast<T*>(stackStorage->storage + start_of_mem_area);
+      return reinterpret_cast<T*>(start_of_mem_area);
     }
 
     void deallocate(T*, size_t) noexcept {
