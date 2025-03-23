@@ -31,6 +31,8 @@ struct StackAllocator {
     size_t align;
     StackStorage<N>* stackStorage;
 
+    StackAllocator(): stackStorage() {}
+
     StackAllocator(StackStorage<N>& st_stor) noexcept
             : align(alignof(T))
             , stackStorage(&st_stor)
