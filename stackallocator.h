@@ -91,18 +91,15 @@ struct StackAllocator {
 template<typename T, typename Allocator = std::allocator<T>>
 class List {
     struct BaseNode {
-        BaseNode* prev;
-        BaseNode* next;
+        BaseNode* prev = this;
+        BaseNode* next = this;
 
         BaseNode(BaseNode* p, BaseNode* n)
                 : prev(p)
                 , next(n)
         {}
 
-        BaseNode()
-                : prev(nullptr)
-                , next(nullptr)
-        {}
+        BaseNode() = default;
 
     };
 
@@ -179,17 +176,7 @@ public:
           return *this;
         }
 
-//        operator base_iterator<true>() const {
-//          return base_iterator<true>(node);
-//        }
-
-        bool operator==(const base_iterator& other) const {
-          return node == other.node;
-        }
-
-        bool operator!=(const base_iterator& other) const {
-          return node != other.node;
-        }
+        bool operator==(const base_iterator& other) const = default;
 
         reference operator*() const {
           return static_cast<Node*>(node)->value;
@@ -208,11 +195,11 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     iterator begin() {
-      return (iterator(endNode.next));
+      return iterator(endNode.next);
     }
 
     iterator end() {
-      return (iterator(&endNode));
+      return iterator(&endNode);
     }
 
     const_iterator begin() const {
@@ -255,21 +242,6 @@ public:
       return const_reverse_iterator(cbegin());
     }
 
-//    iterator insert(const_iterator position, const T& value) {
-//      Node* newNode = std::allocator_traits<type_allocator>::allocate(1);
-//      try {
-//        std::allocator_traits<type_allocator>::construct(alloc, &(newNode->value), value);
-//        ++sz;
-//      } catch (...) {
-//        std::allocator_traits<type_allocator>::deallocate(alloc, newNode, 1);
-//        throw;
-//      }
-//      position.node->prev->next = reinterpret_cast<BaseNode*>(newNode);
-//      reinterpret_cast<BaseNode*>(newNode)->next = position.node;
-//      reinterpret_cast<BaseNode*>(newNode)->prev = position.node->prev;
-//      position.node->prev = reinterpret_cast<BaseNode*>(newNode);
-//      return iterator(*reinterpret_cast<BaseNode*>(newNode));
-//    }
       iterator insert(const_iterator position, const T& value) {
         Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
         try {
@@ -293,16 +265,6 @@ public:
     }
 
     iterator erase(const_iterator position) {
-//      std::allocator_traits<type_allocator>
-//              ::destroy(alloc, reinterpret_cast<Node*>(position.node));
-//      iterator it(*(position.node->next));
-//      --sz;
-//      position.node->prev->next = position.node->next;
-//      position.node->next->prev = position.node->prev;
-//      std::allocator_traits<type_allocator>
-//              ::deallocate(alloc, reinterpret_cast<Node*>(position.node), 1);
-//      return it;
-      //ListNode* erase_node = iter.get_ptr();
       BaseNode* prev_node = position.node->prev;
       BaseNode* next_node = position.node->next;
       next_node->prev = prev_node;
@@ -310,46 +272,13 @@ public:
       --sz;
       std::allocator_traits<type_allocator>::destroy(alloc, static_cast<Node*>(position.node));
       std::allocator_traits<type_allocator>::deallocate(alloc, static_cast<Node*>(position.node), 1);
+      return iterator(next_node);
     }
 
 
     Allocator get_allocator() const noexcept {
       return alloc;
     }
-
-//    List()
-//    : sz(0)
-//    , endNode{nullptr, nullptr}
-//    {};
-
-//    explicit List(size_t n) {
-//      size_t count = 0;
-//      for (; n > 0; --n) {
-//        value_type t_obj;
-//        try {
-//          t_obj = value_type();
-//        } catch (...) {
-//          for (; count > 0; --count) {
-//            pop_back();
-//          }
-//          throw;
-//        }
-//        push_back(t_obj);
-//        ++count;
-//      }
-//    }
-//
-//    explicit List(size_t n, const T& x) {
-//      for (; n > 0; --n)
-//        push_back(x);
-//    }
-
-//    List()
-//    :sz(0)
-//    {
-//      endNode.prev = &endNode;
-//      endNode.next = &endNode;
-//    }
 
      List(const Allocator& _alloc = Allocator())
             : sz(0)
@@ -367,11 +296,8 @@ public:
     {
       size_t count = 0;
       for (; n > 0; --n) {
-        //value_type t_obj;
         Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
         try {
-//          t_obj = value_type();
-//          push_back(t_obj);
           std::allocator_traits<type_allocator>::construct(alloc,
                                                            newNode,
                                                            endNode.prev,
@@ -467,7 +393,7 @@ public:
     }
 
     void push_back(const T& value) {
-      Node* newNode = alloc.allocate(1);
+      Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
       try {
         std::allocator_traits<type_allocator>::construct(alloc, newNode, endNode.prev, &endNode, value);
       } catch (...) {
@@ -475,9 +401,9 @@ public:
         throw;
       }
       if (endNode.prev != nullptr) {
-        endNode.prev->next = (newNode);
+        endNode.prev->next = newNode;
       }
-      endNode.prev = (newNode);
+      endNode.prev = newNode;
       ++sz;
     }
 
@@ -489,10 +415,10 @@ public:
         alloc.deallocate(newNode, 1);
         throw;
       }
-      if (endNode.prev != nullptr) {
-        endNode.prev->next = reinterpret_cast<BaseNode*>(newNode);
+      if (endNode.next != nullptr) {
+        endNode.next->prev = newNode;
       }
-      endNode.prev = reinterpret_cast<BaseNode*>(newNode);
+      endNode.next = newNode;
       ++sz;
     }
 
