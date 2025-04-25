@@ -1,4 +1,3 @@
-
 #include "iterator"
 #include "iostream"
 #include "unordered_map"
@@ -6,7 +5,7 @@
 #include "memory"
 #include "list"
 
-// Fixed storage with proper alignment.
+
 template <size_t N>
 struct StackStorage {
     alignas(std::max_align_t) std::byte storage[N];
@@ -28,7 +27,7 @@ struct StackAllocator {
     using const_pointer   = const T*;
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
-    size_t align;  // alignment for T
+    size_t align;
     StackStorage<N>* stackStorage;
 
     StackAllocator(): stackStorage() {}
@@ -61,7 +60,7 @@ struct StackAllocator {
       return *this;
     }
 
-    // Allocate memory for n objects of type T using std::align.
+
     T* allocate(size_t n) {
       std::byte* start_of_mem_area;
       size_t end = stackStorage->storage + N -
@@ -133,13 +132,14 @@ class List {
     using type_allocator= std::allocator_traits<Allocator>::template rebind_alloc<Node>;
     size_t sz;
 public:
-    BaseNode endNode; // fake node
+    BaseNode endNode;
     [[no_unique_address]] type_allocator alloc;
     using value_type = T;
 
+
+
 public:
 
-    // iterator for list
     template<bool Const>
     struct base_iterator {
         using iterator_category = std::bidirectional_iterator_tag;
@@ -281,11 +281,8 @@ public:
       next_node->prev = prev_node;
       prev_node->next = next_node;
       --sz;
-      std::allocator_traits<type_allocator>::destroy(alloc,
-                                                     static_cast<Node*>(position.node));
-      std::allocator_traits<type_allocator>::deallocate(alloc,
-                                                        static_cast<Node*>(position.node),
-                                                        1);
+      std::allocator_traits<type_allocator>::destroy(alloc, static_cast<Node*>(position.node));
+      std::allocator_traits<type_allocator>::deallocate(alloc, static_cast<Node*>(position.node), 1);
       return iterator(next_node);
     }
 
@@ -409,10 +406,7 @@ public:
     void push_back(const T& value) {
       Node* newNode = std::allocator_traits<type_allocator>::allocate(alloc, 1);
       try {
-        std::allocator_traits<type_allocator>::construct(alloc,
-                                                         newNode,
-                                                         endNode.prev,
-                                                         &endNode, value);
+        std::allocator_traits<type_allocator>::construct(alloc, newNode, endNode.prev, &endNode, value);
       } catch (...) {
         alloc.deallocate(newNode, 1);
         throw;
@@ -427,10 +421,7 @@ public:
     void push_front(const T& value) {
       Node* newNode = alloc.allocate(1);
       try {
-        std::allocator_traits<type_allocator>::construct(alloc,
-                                                         newNode,
-                                                         &endNode,
-                                                         endNode.next, value);
+        std::allocator_traits<type_allocator>::construct(alloc, newNode, &endNode, endNode.next, value);
       } catch (...) {
         alloc.deallocate(newNode, 1);
         throw;
